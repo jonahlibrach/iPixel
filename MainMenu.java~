@@ -1,0 +1,320 @@
+import java.io.*; 
+import java.util.*; 
+import java.lang.*;
+import java.awt.event.*; 
+import java.awt.*; 
+import javax.swing.*; 
+
+public class MainMenu extends JFrame{
+  
+  public static void initFill(int r, int c){
+    controled[r][c] = true; 
+    for(int i = 0; i < 4; i++){
+      try{
+        int newRow = r + dir[i][0]; //new row
+        int newCol = c + dir[i][1]; //new col
+        if(colorBoard[newRow][newCol] == colorBoard[0][0] && !controled[newRow][newCol]){
+          initFill(newRow,newCol);
+        }
+      }catch(ArrayIndexOutOfBoundsException e){
+      }  
+    }
+  }
+  
+  public static void fill(int r, int c){
+    
+    colorBoard[r][c] = lastSelected; 
+    for(int i = 0; i < 4; i++){
+      try{
+        int newRow = r + dir[i][0];
+        int newCol = c + dir[i][1]; 
+        Color nct = colorBoard[newRow][newCol]; //new colored tile
+        if(controled[newRow][newCol] && nct != lastSelected){
+          fill(newRow, newCol); 
+        }else if(nct == lastSelected && !controled[newRow][newCol]){ 
+          controled[newRow][newCol] = true; 
+          fill(newRow, newCol); 
+        }}catch(ArrayIndexOutOfBoundsException e){
+          continue;
+        }
+    }
+  }
+
+  public static MainMenu window; 
+  public static boolean gameOn = false; 
+
+  
+  private static JButton buttonList[] = {
+    new JButton("   Blue   "),new JButton("   Purple   "),new JButton("   Red   "),
+    new JButton("   Orange   "), new JButton("   Yellow   "), new JButton("   Green   ")
+  };
+  
+  private static Color[] colourList = {Color.BLUE,Color.MAGENTA,Color.RED,new Color(255,163,0)/*clementine*/,Color.YELLOW,Color.GREEN};
+  private static int movesLeft; 
+  private static int totalMoves;
+  private static int movesMade; 
+  private static int chosenLevel; 
+  
+  private static Color colorBoard[][];
+  private static Color lastSelected; 
+  private static boolean controled[][];
+  private static JLabel mL; 
+  private static int dir[][] = {{0,1},{1,0},{-1,0},{0,-1}};
+  private JMenuBar menu; 
+  private JMenuItem toMainMenu; 
+  private JMenu gameMenuItem; 
+  private JButton play; 
+
+  public MainMenu(){
+    super("iPixel"); 
+    
+    menu = new JMenuBar(); 
+    gameMenuItem = new JMenu("Game"); 
+    toMainMenu = new JMenuItem("Go to Main"); 
+    toMainMenu.setEnabled(false); 
+      boolean isMac = System.getProperty("os.name").split(" ")[0].equals("Mac");
+    int accelKey = (isMac ? Event.META_MASK : 17);
+    toMainMenu.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_N, accelKey));
+    toMainMenu.addActionListener(new ActionListener(){
+      public void actionPerformed(ActionEvent e){
+       mainMenu();  
+       toMainMenu.setEnabled(false); 
+      }
+    }); 
+    
+    menu.add(gameMenuItem); 
+    gameMenuItem.add(toMainMenu); 
+    setJMenuBar(menu); 
+    
+    mainMenu();  
+  }
+  
+  public static int getMovesMade(){
+    return movesMade;  
+  }
+  
+  class BoardPainter extends JPanel{
+    
+    private int pixelSize; 
+    
+    public BoardPainter(int size){
+      pixelSize = size;  
+    }
+    
+    public void paintComponent(Graphics g){
+      super.paintComponent(g);
+      this.setBackground(Color.WHITE); 
+      
+      for(int i = 0; i<colorBoard.length; i++){
+        for(int j = 0; j<colorBoard[i].length; j++){ 
+          
+          g.setColor(colorBoard[i][j]); 
+          g.fillRect(20+pixelSize*j, 20+pixelSize*i, pixelSize, pixelSize); 
+        }
+      }   
+    }
+  }
+  
+  public void mainMenu(){  
+    //housekeeping
+    getContentPane().removeAll(); 
+    setLayout(new FlowLayout()); 
+    // style options etc
+    setTitle("iPixel"); 
+    //variables  
+    JButton[] buttonStrings = {new JButton("Play"), new JButton("Quit")};
+
+    for(final JButton button : buttonStrings){
+      
+      button.addActionListener(new ActionListener(){
+        public void actionPerformed(ActionEvent event){ 
+          
+          String text = button.getText(); 
+          
+          if(text.equals("Play")){ 
+            toMainMenu.setEnabled(true); 
+            chooseLevels(); }
+          //else if(text.equals("Statistics")){ StatsPage s = new StatsPage(); }
+          else if(text.equals("Quit")){ setVisible(false); dispose(); }
+          
+        }
+      });
+      
+      add(button); 
+      
+      setSize(225,80); 
+      setResizable(false); 
+      repaint(); 
+      setLocationRelativeTo(null); 
+    }
+  }
+  
+  public void chooseLevels(){  
+    
+    final JRadioButton levelChoices[] = {new JRadioButton("EASY", true),new JRadioButton("HARD"),new JRadioButton("IMPOSSIBLE")}; 
+    final int[][] boardSizes = {{16,9,40,20},{32,18,20,36},{64,36,10,72}};
+    final ButtonGroup group = new ButtonGroup();
+    getContentPane().removeAll(); 
+    setSize(251,120);  
+    setLayout(new FlowLayout()); 
+    setResizable(false); 
+    
+    for(JRadioButton jrb : levelChoices){ group.add(jrb); add(jrb); } 
+    
+    JPanel bottomPanel = new JPanel(new FlowLayout()); 
+    
+    final JButton[] panelOptions = {new JButton("Play"), new JButton("Back")}; 
+    
+    for(final JButton button : panelOptions){
+      button.addActionListener(
+                               new ActionListener(){
+        public void actionPerformed(ActionEvent event){
+          
+          if(button.getText().equals("Play")){
+            Dimension window = getBounds().getSize(); 
+            
+            for(int i = 0; i < 3; i++)
+              if(levelChoices[i].isSelected()){
+              
+              setInternalBoard(boardSizes[i][0],boardSizes[i][1]); 
+              launchBoard(boardSizes[i][0],boardSizes[i][1],boardSizes[i][2],boardSizes[i][3]); 
+              
+              chosenLevel = i; 
+            }
+          }else{
+            mainMenu(); 
+          }}});
+      
+      bottomPanel.add(button); 
+    } 
+    getRootPane().setDefaultButton(panelOptions[0]);
+    add(bottomPanel, BorderLayout.SOUTH); 
+    repaint(); 
+  }
+  
+  public void launchBoard(int w, int h, int pixelSize, int movL){
+    setLayout(new BorderLayout()); 
+    setResizable(true); 
+    initFill(0,0);
+    
+    getContentPane().removeAll(); 
+    totalMoves = movL; 
+    movesLeft = movL; 
+    mL = new JLabel(""+movesLeft+" Moves Left"); 
+    
+    add(mL, BorderLayout.PAGE_START); 
+    gameOn = true; 
+    toMainMenu.setEnabled(true); 
+    
+    BoardPainter b = new BoardPainter(pixelSize);
+    setSize(680, 480);
+    add(b); 
+    lastSelected = colorBoard[0][0]; 
+    JPanel subPanel = new JPanel(); 
+    
+    for(int i = 0; i<buttonList.length; i++){
+      final int bsc = i; 
+      buttonList[bsc].setBackground(colourList[bsc]); 
+      buttonList[bsc].setOpaque(true); 
+      buttonList[bsc].addActionListener(
+                                        new ActionListener(){
+        public void actionPerformed(ActionEvent event){
+          if(lastSelected != colourList[bsc]){
+            lastSelected = colourList[bsc];
+            fill(0,0); 
+            repaint();  
+            movesLeft--;            
+            if(gameWon()){
+              movesMade = totalMoves-movesLeft;
+              postGame(true, "Congrats, you won in "+movesMade+" moves!");
+            }else if(movesLeft < 0){
+              postGame(false, "Sorry, you lose."); 
+            }
+            mL.setText(""+movesLeft+" Moves Left");
+          }}}
+      ); 
+      subPanel.add(buttonList[bsc]);
+    }
+    add(subPanel, BorderLayout.SOUTH); 
+    setLocationRelativeTo(null); 
+    repaint(); 
+  } 
+  
+  public void postGame(boolean gameResult, String displayMessage){
+    
+
+    //    System.out.println(textInfo.get(data.indexOf(activeUser))); 
+    
+    
+    
+    getContentPane().removeAll(); 
+    JPanel topHalf = new JPanel();
+    JPanel botHalf = new JPanel(); 
+    JPanel centrePanel = new JPanel(); 
+    
+    topHalf.add(new JLabel(displayMessage), BorderLayout.CENTER); 
+    
+    final JButton[] buttons = {new JButton("Play Again"), new JButton("Return to Menu"), new JButton("Quit Game")};
+    for(int i = 0; i < 3; i++){
+      final int button = i; 
+      buttons[i].addActionListener(
+                                   new ActionListener(){
+        public void actionPerformed(ActionEvent event){
+          if(button == 0){ chooseLevels(); }
+          else if(button == 1){ mainMenu(); }
+          else if(button == 2){ setVisible(false); dispose(); }
+        }
+      }); 
+      botHalf.add(buttons[i]); 
+    }  
+    
+    centrePanel.add(topHalf, BorderLayout.PAGE_START); 
+    centrePanel.add(botHalf, BorderLayout.PAGE_END); 
+    
+    add(centrePanel, BorderLayout.CENTER); 
+    
+    setSize(500,105); 
+    repaint(); 
+    
+  }
+  
+  public static boolean gameWon(){
+    
+    for(int rows = 0; rows<controled.length; rows++){
+      for(int col = 0; col<controled[0].length; col++){
+        
+        if(!controled[rows][col]){
+          return false;   
+        }
+      }
+    } 
+    return true; 
+  }
+  
+  public static void setInternalBoard(int w, int h){    
+    
+    colorBoard = new Color[h][w];
+    controled = new boolean[h][w];
+    controled[0][0] = true;
+    
+    for(int r = 0; r < h; r++) //r = row
+      for(int c = 0; c < w; c++) // c = column
+      colorBoard[r][c] = colourList[(int)(Math.random()*6)];
+    
+  }
+
+  public static void main(String[]args){
+    window = new MainMenu();
+    window.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE); 
+    window.setLocationRelativeTo(null); 
+    window.setVisible(true); 
+  }
+  
+  public void iPixelSetSize(int w, int h){
+    setSize(w,h); 
+    setLocationRelativeTo(null); 
+    setResizable(false); 
+  }
+  
+  
+}
